@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParseX Crypto Sale</title>
+    <style>
+        body {
+            background-color: #1c1c1c;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            text-align: center;
+            padding: 50px;
+        }
+        .header {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        .input-field {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 200px;
+        }
+        .sale-info {
+            font-size: 20px;
+            margin: 30px 0;
+        }
+        .whitepaper-btn {
+            background-color: #0066cc;
+        }
+        .whitepaper-btn:hover {
+            background-color: #005bb5;
+        }
+        .tokenomics {
+            margin-top: 40px;
+        }
+        .footer {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">ParseX Crypto Token Sale</div>
+
+    <div>
+        <h3>Buy ParseX Tokens</h3>
+        <input type="number" id="usdcInput" class="input-field" placeholder="Amount in USDC" />
+        <button id="buyButton" class="button">Buy Tokens</button>
+    </div>
+
+    <div class="sale-info">
+        <p>Price per token: 0.016 USDC</p>
+        <p>Total tokens available: 12,500,000</p>
+    </div>
+
+    <div class="whitepaper">
+        <button class="button whitepaper-btn" onclick="window.open('path/to/whitepaper.pdf', '_blank')">View Whitepaper</button>
+    </div>
+
+    <div class="tokenomics">
+        <h3>Tokenomics</h3>
+        <p>Total supply: 500,000,000 ParseX tokens</p>
+        <p>Projected market cap: 25,000,000 USD</p>
+    </div>
+</div>
+
+<div class="footer">
+    <img src="parsex_logo.png" alt="ParseX Logo" width="150px">
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.56.0/dist/web3.min.js"></script>
+<script>
+    // Phantom Wallet connection
+    const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'));
+    const walletAddress = '8WsA7RjuNWYYTChTdgD9e86Ag2qz7vhvxs4c8UBoEQGn'; // ParseX wallet address
+    const TOKEN_PRICE = 0.016;
+
+    async function connectWallet() {
+        if (window.solana && window.solana.isPhantom) {
+            try {
+                const response = await window.solana.connect();
+                console.log('Connected to Phantom wallet:', response.publicKey.toString());
+                return response.publicKey;
+            } catch (err) {
+                console.error('Wallet connection failed:', err);
+            }
+        } else {
+            alert('Phantom wallet not detected!');
+        }
+    }
+
+    async function buyTokens() {
+        const usdcAmount = parseFloat(document.getElementById('usdcInput').value);
+        if (isNaN(usdcAmount) || usdcAmount <= 0) {
+            alert('Please enter a valid USDC amount!');
+            return;
+        }
+
+        const tokenAmount = (usdcAmount / TOKEN_PRICE).toFixed(0);
+        const userWallet = await connectWallet();
+
+        if (userWallet) {
+            const transaction = new solanaWeb3.Transaction();
+            const usdcAccount = await getUsdcAccount(userWallet);
+
+            // Here, create a transaction to transfer the USDC to the ParseX wallet
+            const transferInstruction = solanaWeb3.SystemProgram.transfer({
+                fromPubkey: userWallet,
+                toPubkey: new solanaWeb3.PublicKey(walletAddress),
+                lamports: usdcAmount * 1e6, // Convert USDC to lamports
+            });
+
+            transaction.add(transferInstruction);
+
+            const { blockhash } = await connection.getRecentBlockhash();
+            transaction.recentBlockhash = blockhash;
+            transaction.feePayer = userWallet;
+
+            try {
+                const signedTransaction = await window.solana.signTransaction(transaction);
+                const txid = await connection.sendRawTransaction(signedTransaction.serialize());
+                await connection.confirmTransaction(txid);
+                alert(`Transaction successful! You bought ${tokenAmount} ParseX tokens.`);
+            } catch (err) {
+                console.error('Transaction failed:', err);
+                alert('Transaction failed!');
+            }
+        }
+    }
+
+    document.getElementById('buyButton').addEventListener('click', buyTokens);
+</script>
+</body>
+</html>
